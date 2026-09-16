@@ -12,7 +12,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🧵 مساعد مصنع لافيتو")
+st.title("🧵 LAVETO GPT")
 
 # إدخال المفتاح في القائمة الجانبية
 api_key = st.sidebar.text_input("Groq API Key", type="password", value="")
@@ -62,7 +62,7 @@ if prompt := st.chat_input("اسأل عن مبيعات، كميات، أو مو�
                             {"role": "system", "content": system_instruction},
                             {"role": "user", "content": prompt}
                         ],
-                        model="llama-3.3-70b-versatile"
+                        model="llama-3.1-8b-instant"
                     )
                     answer = chat_completion.choices[0].message.content
                     st.markdown(answer)
