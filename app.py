@@ -1,63 +1,47 @@
-import streamlit as st
-import pandas as pd
-from groq import Groq
-
-st.set_page_config(page_title="تطبيق لافيتو", page_icon="🧵", layout="centered")
-
-st.markdown("""
-    <style>
-    .stApp { direction: rtl; }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🧵 مساعد مصنع لافيتو")
-
-# إدخال المفتاح في الجانب أو تثبيته برمجياً
-api_key = st.sidebar.text_input("Groq API Key", type="password", value="")
-
-# رفع ملف الإكسيل
-uploaded_file = st.file_uploader("ارفع ملف إكسيل المصنع (sales.xlsx)", type=["xlsx"])
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-if prompt := st.chat_input("اسأل عن مبيعات، كميات، أو موديل..."):
-    if not api_key:
-        st.error("يرجى إدخال Groq API Key أولاً في القائمة الجانبية.")
-    elif uploaded_file is None:
-        st.warning("يرجى رفع ملف الإكسيل أولاً للبدء.")
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # قراءة البيانات
+ try:
+        # قراءة الإكسيل وتجهيز عينة للذكاء الاصطناعي
         df = pd.read_excel(uploaded_file)
-        data_preview = df.head(15).to_string(index=False)
         
-        client = Groq(api_key=api_key)
+        # استخراج ملخص للأعمدة وعينة أسطر
+        columns_list = list(df.columns)
+        total_records = len(df)
+        data_sample = df.head(15).to_string(index=False)
         
+        # صياغة التعليمات البرمجية للوكيل
         system_instruction = f"""
-        أنت مساعد ذكي لإدارة مصنع ملابس لافيتو.
-        أجب على استفسارات المبيعات والكميات بدقة واختصار استناداً لبيانات الشيت.
-        أعمدة الشيت: {list(df.columns)}
-        عينة من البيانات:
-        {data_preview}
+        أنت مساعد ذكي ومتخصص في تحليل البيانات لمصنع ملابس لافيتو (Laveto).
+        مهمتك الإجابة بدقة، احترافية، وباللغة العربية على أسئلة الإدارة.
+        
+        معلومات الشيت:
+        - إجمالي الحركات/الصفوف: {total_records}
+        - الأعمدة المتوفرة: {columns_list}
+        
+        عينة من البيانات الفعلية:
+        {data_sample}
+        
+        تعليمات هامة:
+        - التزم بالبيانات والأرقام المذكورة بدقة دون افتراض أرقام غير موجودة.
+        - إذا لم تكن المعلومة متوفرة في العينة، وضّح ذلك باختصار واذكر أسماء الأعمدة المتاحة للمساعدة.
         """
 
+        # الاتصال بـ Groq API
+        client = Groq(api_key=api_key)
+
         with st.chat_message("assistant"):
-            with st.spinner("جاري مراجعة الشيت..."):
+            with st.spinner("جاري فحص الشيت وتحليل البيانات..."):
                 chat_completion = client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": user_prompt}
                     ],
-                    model="qwen-2.5-32b", # موديل سريع ومجاني
+                    # استخدام موديل قوي وسريع معتمد رسمياً في Groq
+                    model="llama-3.3-70b-versatile",
                 )
                 answer = chat_completion.choices[0].message.content
                 st.markdown(answer)
+                
+                # حفظ الرد في سجل الشات
                 st.session_state.messages.append({"role": "assistant", "content": answer})
+
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء معالجة الطلب: {e}")
